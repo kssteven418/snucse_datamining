@@ -56,75 +56,77 @@ public class TermFrequency extends Configured implements Tool {
         return job.waitForCompletion(true) ? 0 : -1;
     }
 
+
+///////////////////////////////HASHED STRUCTURE DEFINITION////////////////////////////////////
     public static class Node{
-    	
-	    int num;
-	    String value;
-	    Node next;
+        
+        int num;
+        String value;
+        Node next;
 
-    	public Node(){
-    		next = null;
-    		num = -1;
-    		value = "";
-    	}
+        public Node(){
+            next = null;
+            num = -1;
+            value = "";
+        }
 
-    	public Node(int n){
-    		next = null;
-    		num = n;
-    		value = "";
-    	}
+        public Node(int n){
+            next = null;
+            num = n;
+            value = "";
+        }
     }
 
-	    public static class Hash{
+    public static class Hash{
 
-    	int size;
-    	Node[] hash;
+        int size;
+        Node[] hash;
 
-    	Hash(int _size){
-    		size = _size;
-    		hash = new Node[size];
-    		for(int i=0; i<size; i++){
-    			hash[i] = new Node();
-    		}
-    	}
+        Hash(int _size){
+            size = _size;
+            hash = new Node[size];
+            for(int i=0; i<size; i++){
+                hash[i] = new Node();
+            }
+        }
 
-    	//Hash Ftn : map a String value to a integer index
-    	int hashFtn(String value){
-    		int sum = 0;
-    		for(int i=0; i<value.length(); i++){
-				sum = sum*('z'-'a'+1);
-    			sum += (value.charAt(i)-'a');
-    		}
-    		sum = sum%size;
+        //Hash Ftn : map a String value to a integer index
+        int hashFtn(String value){
+            int sum = 0;
+            for(int i=0; i<value.length(); i++){
+                sum = sum*('z'-'a'+1);
+                sum += (value.charAt(i)-'a');
+            }
+            sum = sum%size;
 
-    		if(sum<0)
-    			sum += size;
-    		return sum;
-    	}
+            if(sum<0)
+                sum += size;
+            return sum;
+        }
 
 
-    	void insert(String value){
-    		int key = hashFtn(value);
-    		Node point = hash[key];
-    		while(true){
+        void insert(String value){
+            int key = hashFtn(value);
+            Node point = hash[key];
+            while(true){
 
-    			if(point.value.equals(value)){
-    				point.num++;
-    				break;
-    			}
+                if(point.value.equals(value)){
+                    point.num++;
+                    break;
+                }
 
-    			if(point.next==null){    				
-    				Node newNode = new Node(1);
-    				newNode.value = new String(value);
-    				point.next = newNode;
-    				break;
-    			}
-	    		
-    			point = point.next;
-    		}
-    	}
+                if(point.next==null){                   
+                    Node newNode = new Node(1);
+                    newNode.value = new String(value);
+                    point.next = newNode;
+                    break;
+                }
+                
+                point = point.next;
+            }
+        }
     }
-		
+    //////////////////////////////////////////////////////////////////////////////  
 
     
     public static class TFMapper extends Mapper<LongWritable, Text, TermDocumentPair, DoubleWritable> {
@@ -132,7 +134,7 @@ public class TermFrequency extends Configured implements Tool {
         private TermDocumentPair keyOut = new TermDocumentPair();
         private DoubleWritable doubleW = new DoubleWritable(1); 
 
-		
+        
 
         @Override
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
@@ -141,7 +143,7 @@ public class TermFrequency extends Configured implements Tool {
             String[] lines = _line.split("\n");
 
             for (String line : lines) {
-                // write (word, 1) pair for each word in the line
+
                 String[] temp = line.split("\t");
                 int docId = Integer.parseInt(temp[0]);
 
@@ -150,8 +152,9 @@ public class TermFrequency extends Configured implements Tool {
                 Hash hash = new Hash(109);
 
                 //Build Hash Table
+
                 for(String word : words){             
-                	hash.insert(word);
+                    hash.insert(word);
 
                 }
 
@@ -160,31 +163,31 @@ public class TermFrequency extends Configured implements Tool {
                 int maxnum = 0;
 
                 for(int i=0; i<hash.size; i++){
-                	
-    				Node point = hash.hash[i].next;
-    				
-    				while(point!=null){
-    					
-    					if(point.num>maxnum)
-    						maxnum = point.num;
+                    
+                    Node point = hash.hash[i].next;
+                    
+                    while(point!=null){
+                        
+                        if(point.num>maxnum)
+                            maxnum = point.num;
 
-                		point = point.next;
-    				}
-                	
+                        point = point.next;
+                    }
+                    
                 }
 
                 for(int i=0; i<hash.size; i++){
-                	
-    				Node point = hash.hash[i].next;
-    				
-    				while(point!=null){
-    					
-    					keyOut.set(point.value, docId);
-    					doubleW = new DoubleWritable(point.num*0.5/maxnum+0.5);
-                		context.write(keyOut, doubleW);	
-                		point = point.next;
-    				}
-                	
+                    
+                    Node point = hash.hash[i].next;
+                    
+                    while(point!=null){
+                        
+                        keyOut.set(point.value, docId);
+                        doubleW = new DoubleWritable(point.num*0.5/maxnum+0.5);
+                        context.write(keyOut, doubleW); 
+                        point = point.next;
+                    }
+                    
                 }
                 
             }
